@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HVACQuote.ai — AE Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F4F6F9; color: #1B2A4A; min-height: 100vh; }
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .logo { font-size: 20px; font-weight: 700; color: #1B2A4A; }
+  .logo span { color: #00B4D8; }
+  .top-meta { font-size: 13px; color: #6B7280; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .badge-amber { background: #FFF8EC; color: #92400E; border: 1px solid #F4A261; }
+  .badge-green { background: #E8F8EF; color: #1A6E3E; border: 1px solid #1A9E5C; }
+  .badge-red   { background: #FDECEA; color: #B91C1C; border: 1px solid #E63946; }
+
+  .pace-bar { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; border: 1px solid #E2E8F0; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .pace-label { font-size: 13px; color: #6B7280; }
+  .pace-label strong { color: #1B2A4A; }
+  .progress-track { flex: 1; min-width: 200px; height: 8px; background: #E2E8F0; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 8px; border-radius: 4px; background: #00B4D8; transition: width 0.6s ease; }
+  .pace-gap { font-size: 13px; font-weight: 600; color: #E63946; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .kpi { background: white; border-radius: 12px; padding: 16px 18px; border: 1px solid #E2E8F0; }
+  .kpi-label { font-size: 12px; color: #6B7280; margin-bottom: 6px; }
+  .kpi-val { font-size: 26px; font-weight: 700; color: #1B2A4A; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: #6B7280; margin-top: 4px; }
+
+  .section-hdr { font-size: 12px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 12px; }
+
+  .ae-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .ae-card { background: white; border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; }
+  .ae-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .ae-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+  .ae-name { font-size: 15px; font-weight: 600; color: #1B2A4A; }
+  .ae-sub { font-size: 12px; color: #6B7280; margin-top: 2px; }
+  .ae-progress { margin-bottom: 12px; }
+  .ae-progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #6B7280; margin-bottom: 5px; }
+  .ae-progress-pct { font-weight: 600; color: #1B2A4A; }
+  .ae-track { height: 7px; background: #F4F6F9; border-radius: 4px; overflow: hidden; }
+  .ae-fill { height: 7px; border-radius: 4px; }
+  .ae-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ae-stat { background: #F4F6F9; border-radius: 8px; padding: 8px 10px; }
+  .ae-stat-lbl { font-size: 11px; color: #6B7280; }
+  .ae-stat-val { font-size: 15px; font-weight: 600; color: #1B2A4A; margin-top: 2px; }
+
+  .two-col { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+  .chart-card { background: white; border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; }
+  .chart-title { font-size: 14px; font-weight: 600; color: #1B2A4A; margin-bottom: 12px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #6B7280; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .history-card { background: white; border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; margin-bottom: 24px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: #6B7280; padding: 8px 10px; border-bottom: 1px solid #E2E8F0; white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #F4F6F9; color: #1B2A4A; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; font-weight: 700; }
+  tr:hover td { background: #F9FBFD; }
+
+  .footer { text-align: center; font-size: 12px; color: #6B7280; padding: 20px 0 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top-bar">
+    <div>
+      <div class="logo">HVAC<span>Quote</span>.ai</div>
+      <div class="top-meta">AE Sales Dashboard &nbsp;·&nbsp; April 2026 &nbsp;·&nbsp; 13 of 22 working days elapsed</div>
+    </div>
+    <span class="badge badge-amber">Team: ⚠️ Watch</span>
+  </div>
+
+  <div class="pace-bar">
+    <div class="pace-label"><strong>Month progress</strong> — 59% of working days done</div>
+    <div class="progress-track"><div class="progress-fill" style="width:59%"></div></div>
+    <div class="pace-label">Expected: <strong>$176,886</strong> &nbsp;·&nbsp; Actual: <strong>$133,350</strong></div>
+    <div class="pace-gap">Gap: -$43,536</div>
+  </div>
+
+  <div class="section-hdr">Team KPIs — this month</div>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Team ARR closed</div>
+      <div class="kpi-val">$133,350</div>
+      <div class="kpi-sub">of $299,250 quota</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">ARR attainment</div>
+      <div class="kpi-val">44.6%</div>
+      <div class="kpi-sub">target ~59% by now</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total deals (combined)</div>
+      <div class="kpi-val">34</div>
+      <div class="kpi-sub">of 75 team target</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Demos ran</div>
+      <div class="kpi-val">71</div>
+      <div class="kpi-sub">all AEs combined</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">YTD team ARR</div>
+      <div class="kpi-val">$585,628</div>
+      <div class="kpi-sub">Jan – Apr 2026</div>
+    </div>
+  </div>
+
+  <div class="section-hdr">Per AE — April 2026</div>
+  <div class="ae-grid">
+
+    <div class="ae-card">
+      <div class="ae-head">
+        <div class="ae-avatar" style="background:#EAF7FF;color:#0C447C;">AP</div>
+        <div>
+          <div class="ae-name">Alex Peterson</div>
+          <div class="ae-sub">Founding AE &nbsp;<span class="badge badge-amber">⚠️ Watch</span></div>
+        </div>
+      </div>
+      <div class="ae-progress">
+        <div class="ae-progress-label"><span>ARR attainment</span><span class="ae-progress-pct">55.8%</span></div>
+        <div class="ae-track"><div class="ae-fill" style="width:55.8%;background:#378ADD;"></div></div>
+      </div>
+      <div class="ae-stats">
+        <div class="ae-stat"><div class="ae-stat-lbl">ARR closed</div><div class="ae-stat-val">$55,650</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Monthly deals</div><div class="ae-stat-val">11 / 20</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Annual deals</div><div class="ae-stat-val">3 / 5</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Demos ran</div><div class="ae-stat-val">23</div></div>
+      </div>
+    </div>
+
+    <div class="ae-card">
+      <div class="ae-head">
+        <div class="ae-avatar" style="background:#E1F5EE;color:#085041;">VC</div>
+        <div>
+          <div class="ae-name">Vincent Columbus</div>
+          <div class="ae-sub">AE &nbsp;<span class="badge badge-red">🔴 Behind</span></div>
+        </div>
+      </div>
+      <div class="ae-progress">
+        <div class="ae-progress-label"><span>ARR attainment</span><span class="ae-progress-pct">28.4%</span></div>
+        <div class="ae-track"><div class="ae-fill" style="width:28.4%;background:#E24B4A;"></div></div>
+      </div>
+      <div class="ae-stats">
+        <div class="ae-stat"><div class="ae-stat-lbl">ARR closed</div><div class="ae-stat-val">$28,350</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Monthly deals</div><div class="ae-stat-val">6 / 20</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Annual deals</div><div class="ae-stat-val">1 / 5</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Demos ran</div><div class="ae-stat-val">21</div></div>
+      </div>
+    </div>
+
+    <div class="ae-card">
+      <div class="ae-head">
+        <div class="ae-avatar" style="background:#FFF8EC;color:#633806;">MH</div>
+        <div>
+          <div class="ae-name">Mark Hardy</div>
+          <div class="ae-sub">AE &nbsp;<span class="badge badge-amber">⚠️ Watch</span></div>
+        </div>
+      </div>
+      <div class="ae-progress">
+        <div class="ae-progress-label"><span>ARR attainment</span><span class="ae-progress-pct">49.5%</span></div>
+        <div class="ae-track"><div class="ae-fill" style="width:49.5%;background:#BA7517;"></div></div>
+      </div>
+      <div class="ae-stats">
+        <div class="ae-stat"><div class="ae-stat-lbl">ARR closed</div><div class="ae-stat-val">$49,350</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Monthly deals</div><div class="ae-stat-val">12 / 20</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Annual deals</div><div class="ae-stat-val">1 / 5</div></div>
+        <div class="ae-stat"><div class="ae-stat-lbl">Demos ran</div><div class="ae-stat-val">27</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-title">ARR closed by month (YTD)</div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#378ADD;"></span>Alex</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#1D9E75;"></span>Vincent</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#BA7517;"></span>Mark</span>
+      </div>
+      <div style="position:relative;height:220px;">
+        <canvas id="arrChart" role="img" aria-label="Grouped bar chart ARR by AE Jan-Apr 2026">ARR: Alex 94080/82090/139608/55650, Vincent 0/29400/92400/28350, Mark 0/0/14700/49350.</canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Deal attainment — April</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="dealChart" role="img" aria-label="Horizontal bar chart deal attainment per AE April 2026">Alex 56%, Vincent 28%, Mark 52%.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-hdr">Monthly history</div>
+  <div class="history-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Alex ARR</th>
+          <th>Alex deals</th>
+          <th>Vincent ARR</th>
+          <th>Vincent deals</th>
+          <th>Mark ARR</th>
+          <th>Mark deals</th>
+          <th>Team ARR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Jan 2026</td><td>$94,080</td><td>24</td><td>—</td><td>—</td><td>—</td><td>—</td><td>$94,080</td></tr>
+        <tr><td>Feb 2026</td><td>$82,090</td><td>21</td><td>$29,400</td><td>7</td><td>—</td><td>—</td><td>$111,490</td></tr>
+        <tr><td>Mar 2026</td><td>$139,608</td><td>35</td><td>$92,400</td><td>22</td><td>$14,700</td><td>4</td><td>$246,708</td></tr>
+        <tr><td>Apr 2026*</td><td>$55,650</td><td>14</td><td>$28,350</td><td>7</td><td>$49,350</td><td>12</td><td>$133,350</td></tr>
+        <tr><td>YTD total</td><td>$371,428</td><td>94</td><td>$150,150</td><td>36</td><td>$64,050</td><td>16</td><td>$585,628</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:#6B7280;margin-top:8px;">* April in progress — 13 of 22 days elapsed</div>
+  </div>
+
+  <div class="footer">HVACQuote.ai &nbsp;·&nbsp; Generated April 2026 &nbsp;·&nbsp; Data from AE Team Metrics tracker</div>
+
+</div>
+
+<script>
+new Chart(document.getElementById('arrChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Jan','Feb','Mar','Apr'],
+    datasets: [
+      { label: 'Alex', data: [94080,82090,139608,55650], backgroundColor: '#378ADD', borderRadius: 3 },
+      { label: 'Vincent', data: [0,29400,92400,28350], backgroundColor: '#1D9E75', borderRadius: 3 },
+      { label: 'Mark', data: [0,0,14700,49350], backgroundColor: '#BA7517', borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('dealChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Alex','Vincent','Mark'],
+    datasets: [
+      { label: 'Attainment', data: [56,28,52], backgroundColor: ['#378ADD','#E24B4A','#BA7517'], borderRadius: 3, barThickness: 30 },
+      { label: 'Target', data: [100,100,100], backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 3, barThickness: 30 }
+    ]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.dataset.label === 'Target' ? 'Target: 100%' : 'Attainment: ' + ctx.raw + '%' } } },
+    scales: {
+      x: { max: 110, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, callback: v => v + '%' } },
+      y: { grid: { display: false }, ticks: { font: { size: 12 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
